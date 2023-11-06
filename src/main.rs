@@ -41,12 +41,7 @@ fn char_to_bitset_index(c: char) -> usize {
 
 fn build_bitsets(words: &[Word]) -> [BitSet; NLETTERS] {
     let sample_bitset = all_ones_bitset(words.len());
-    let mut bitsets: [BitSet; NLETTERS] = vec![sample_bitset; NLETTERS]/*std::slice::from_ref(&sample_bitset)
-                                            .into_iter()
-                                            .cycle()
-                                            .cloned()
-                                            .take(NLETTERS)
-                                            .collect::<Vec<_>>()*/
+    let mut bitsets: [BitSet; NLETTERS] = vec![sample_bitset; NLETTERS]
                                             .try_into()
                                             .unwrap();
 
@@ -70,6 +65,10 @@ fn search(all_words: &[Word], letter_filters: &[BitSet]) {
 fn search_rec(curr_candidates: &BitSet, letter_filters: &[BitSet], curr_words: &mut Vec<usize>, all_words: &[Word]) {
     #[allow(unused_parens)]
     let final_step = (curr_words.len() == 4);
+
+    let mut rec_candidates = curr_candidates.clone();
+    let mut last_i = 0;
+
     for i in curr_candidates.ones() {
         if final_step {
             // TODO assert that the solutions make sense
@@ -79,19 +78,19 @@ fn search_rec(curr_candidates: &BitSet, letter_filters: &[BitSet], curr_words: &
         }
         else {
             // Recurse
-            let new_candidates = filter_candidates(curr_candidates, i, all_words, letter_filters);
+            // Optimization: perform the filtering of previous words as we go
+            rec_candidates.set_range(last_i..i, false);
+            let new_candidates = filter_candidates(&rec_candidates, i, all_words, letter_filters);
             curr_words.push(i);
             search_rec(&new_candidates, letter_filters, curr_words, all_words);
             curr_words.pop();
         }
+        last_i = i;
     }
 }
 
 fn filter_candidates(curr_candidates: &BitSet, new_word_idx: usize, all_words: &[Word], letter_filters: &[BitSet]) -> BitSet {
-    //println!("Level = {}")
-
     let mut new_candidates = curr_candidates.clone();
-    new_candidates.set_range(0..new_word_idx, false);
 
     use std::ops::BitAndAssign;
     let new_word = &all_words[new_word_idx];
