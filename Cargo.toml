@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 csv = "1.3.0"
+fixedbitset = "0.4.2"
