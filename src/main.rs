@@ -3,7 +3,6 @@ use std::collections::HashSet;
 
 fn main() {
     let words = read_words();
-    println!("{:?}", words);
     let bs = build_bitsets(&words);
 
     search(&words, &bs[..]);
@@ -24,7 +23,7 @@ fn read_words() -> Vec<Word> {
                 .filter(|s| s.len() == 5)
                 .filter(|s| all_letters_distinct(s))
                 .map(|s| String::from(s))
-                .take(10)
+                .take(5000)
                 .collect()
 }
 
