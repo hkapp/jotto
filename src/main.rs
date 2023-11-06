@@ -1,7 +1,9 @@
 use fixedbitset::FixedBitSet as BitSet;
+use std::collections::HashSet;
 
 fn main() {
     let words = read_words();
+    println!("{:?}", words);
     let bs = build_bitsets(&words);
 
     search(&words, &bs[..]);
@@ -10,20 +12,20 @@ fn main() {
 type Word = String;
 
 fn read_words() -> Vec<Word> {
-    let input_file = "data/words.csv";
-    let mut csv_reader = csv::ReaderBuilder::new()
-                            .delimiter(b'\t')
-                            .from_path(input_file)
-                            .unwrap();
+    fn all_letters_distinct(s: &str) -> bool {
+        let chars_used: HashSet<_> = s.chars().collect();
+        chars_used.len() == s.len()
+    }
 
-    csv_reader.records()
-        .map(|res| res.unwrap())
-        .flat_map(|r| r.into_iter()
-                        .map(|s| String::from(s))
-                        .collect::<Vec<_>>()
-                        .into_iter())
-        .take(10)
-        .collect()
+    let input_file = "data/words.txt";
+    std::fs::read_to_string(input_file)
+                .unwrap()
+                .lines()
+                .filter(|s| s.len() == 5)
+                .filter(|s| all_letters_distinct(s))
+                .map(|s| String::from(s))
+                .take(10)
+                .collect()
 }
 
 const NLETTERS: usize = 26;
