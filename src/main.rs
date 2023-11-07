@@ -23,7 +23,6 @@ fn read_words() -> Vec<Word> {
                 .filter(|s| s.len() == 5)
                 .filter(|s| all_letters_distinct(s))
                 .map(|s| String::from(s))
-                .take(5000)
                 .collect()
 }
 
