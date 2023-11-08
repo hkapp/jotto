@@ -1,11 +1,13 @@
 use fixedbitset::FixedBitSet as BitSet;
 use std::collections::HashSet;
+use std::cmp::Ordering;
 
 fn main() {
     let words = read_words();
     let bs = build_bitsets(&words);
+    let mat_candidates = materialize_candidates(&words, &bs);
 
-    search(&words, &bs[..]);
+    search(&words, &mat_candidates);
 }
 
 type Word = String;
@@ -55,20 +57,50 @@ fn build_bitsets(words: &[Word]) -> [BitSet; NLETTERS] {
     return bitsets;
 }
 
-fn search(all_words: &[Word], letter_filters: &[BitSet]) {
-    let all_candidates = all_ones_bitset(all_words.len());
-    let mut stack = Vec::new();
-    search_rec(&all_candidates, letter_filters, &mut stack, all_words);
+// This basically acts as a graph in adjacency list format
+type Neighbours = Vec<WordIdx>;
+type WordIdx = usize;
+
+fn materialize_candidates(words: &[Word], letter_filters: &[BitSet]) -> Vec<Neighbours> {
+    words.into_iter()
+        .enumerate()
+        .map(|(i, w)| {
+            let wbs = word_bitset(w, letter_filters);
+            wbs.ones()
+                .filter(|candidate| *candidate > i) // only looking at words after myself
+                .collect()
+        })
+        .collect()
 }
 
-fn search_rec(curr_candidates: &BitSet, letter_filters: &[BitSet], curr_words: &mut Vec<usize>, all_words: &[Word]) {
+fn word_bitset(w: &Word, letter_filters: &[BitSet]) -> BitSet {
+    let nwords = letter_filters[0].len(); // in bits
+    let mut candidates = all_ones_bitset(nwords);
+
+    use std::ops::BitAndAssign;
+    w.chars()
+        .map(|letter| {
+            let bs_idx = char_to_bitset_index(letter);
+            &letter_filters[bs_idx]
+        })
+        // TODO clone the first of these 5 bitsets and use that as the start
+        .for_each(|filter| candidates.bitand_assign(filter));
+
+    return candidates;
+}
+
+fn search(all_words: &[Word], mat_candidates: &[Neighbours]) {
+    let all_candidates = (0..all_words.len()).collect::<Vec<_>>();
+    let mut stack = Vec::new();
+    search_rec(&all_candidates, mat_candidates, &mut stack, all_words);
+}
+
+// TODO: we can easily optimize avoiding having to materialize the first level if we implement our own Index that always returns the index
+fn search_rec(curr_candidates: &Neighbours, mat_candidates: &[Neighbours], curr_words: &mut Vec<WordIdx>, all_words: &[Word]) {
     #[allow(unused_parens)]
     let final_step = (curr_words.len() == 4);
 
-    let mut rec_candidates = curr_candidates.clone();
-    let mut last_i = 0;
-
-    for i in curr_candidates.ones() {
+    for i in curr_candidates.into_iter().cloned() {
         if final_step {
             // TODO assert that the solutions make sense
             curr_words.push(i);
@@ -77,28 +109,42 @@ fn search_rec(curr_candidates: &BitSet, letter_filters: &[BitSet], curr_words: &
         }
         else {
             // Recurse
-            // Optimization: perform the filtering of previous words as we go
-            rec_candidates.set_range(last_i..i, false);
-            let new_candidates = filter_candidates(&rec_candidates, i, all_words, letter_filters);
+            let new_candidates = merge_sorted(curr_candidates, &mat_candidates[i]);
             curr_words.push(i);
-            search_rec(&new_candidates, letter_filters, curr_words, all_words);
+            search_rec(&new_candidates, mat_candidates, curr_words, all_words);
             curr_words.pop();
         }
-        last_i = i;
     }
 }
 
-fn filter_candidates(curr_candidates: &BitSet, new_word_idx: usize, all_words: &[Word], letter_filters: &[BitSet]) -> BitSet {
-    let mut new_candidates = curr_candidates.clone();
+// Merge two sorted slices
+// These must be in ascending order
+fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T]) -> Vec<T> {
+    let mut left_idx = 0;
+    let mut right_idx = 0;
+    let mut result = Vec::new();
 
-    use std::ops::BitAndAssign;
-    let new_word = &all_words[new_word_idx];
-    new_word.chars()
-        .map(|letter| {
-            let bs_idx = char_to_bitset_index(letter);
-            &letter_filters[bs_idx]
-        })
-        .for_each(|filter| new_candidates.bitand_assign(filter));
+    // Any elements still present on either side when the other side is done cannot be in the result set
+    while left_idx < left.len() && right_idx < right.len() {
+        match left[left_idx].cmp(&right[right_idx]) {
+            // Case 1: left == right
+            Ordering::Equal => {
+                result.push(left[left_idx].clone());
+                left_idx += 1;
+                right_idx += 1;
+            },
+            // Case 2: left > right
+            // Move forward on the right
+            // Explanation: ascending order -> the next elements on the left are all greater than the current one
+            Ordering::Greater => {
+                right_idx += 1;
+            }
+            // Opposite of case 2
+            Ordering::Less => {
+                left_idx += 1;
+            }
+        }
+    }
 
-    return new_candidates;
+    return result;
 }
