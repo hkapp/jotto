@@ -99,6 +99,7 @@ fn search(all_words: &[Word], mat_candidates: &[Neighbours]) {
 fn search_rec(curr_candidates: &Neighbours, mat_candidates: &[Neighbours], curr_words: &mut Vec<WordIdx>, all_words: &[Word]) {
     #[allow(unused_parens)]
     let final_step = (curr_words.len() == 4);
+    let mut rec_candidates = Vec::new();
 
     for i in curr_candidates.into_iter().cloned() {
         if final_step {
@@ -109,9 +110,9 @@ fn search_rec(curr_candidates: &Neighbours, mat_candidates: &[Neighbours], curr_
         }
         else {
             // Recurse
-            let new_candidates = merge_sorted(curr_candidates, &mat_candidates[i]);
+            merge_sorted(curr_candidates, &mat_candidates[i], &mut rec_candidates);
             curr_words.push(i);
-            search_rec(&new_candidates, mat_candidates, curr_words, all_words);
+            search_rec(&rec_candidates, mat_candidates, curr_words, all_words);
             curr_words.pop();
         }
     }
@@ -119,10 +120,10 @@ fn search_rec(curr_candidates: &Neighbours, mat_candidates: &[Neighbours], curr_
 
 // Merge two sorted slices
 // These must be in ascending order
-fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T]) -> Vec<T> {
+fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T], result: &mut Vec<T>) {
     let mut left_idx = 0;
     let mut right_idx = 0;
-    let mut result = Vec::new();
+    result.clear();
 
     // Any elements still present on either side when the other side is done cannot be in the result set
     while left_idx < left.len() && right_idx < right.len() {
@@ -145,6 +146,4 @@ fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T]) -> Vec<T> {
             }
         }
     }
-
-    return result;
 }
