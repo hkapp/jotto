@@ -127,23 +127,24 @@ fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T], result: &mut Vec<T>) {
 
     // Any elements still present on either side when the other side is done cannot be in the result set
     while left_idx < left.len() && right_idx < right.len() {
-        match left[left_idx].cmp(&right[right_idx]) {
-            // Case 1: left == right
-            Ordering::Equal => {
-                result.push(left[left_idx].clone());
-                left_idx += 1;
-                right_idx += 1;
-            },
-            // Case 2: left > right
-            // Move forward on the right
-            // Explanation: ascending order -> the next elements on the left are all greater than the current one
-            Ordering::Greater => {
-                right_idx += 1;
-            }
-            // Opposite of case 2
-            Ordering::Less => {
-                left_idx += 1;
-            }
+        let left_val  = &left[left_idx];
+        let right_val = &right[right_idx];
+
+        // Case 1: left == right
+        if left_val == right_val {
+            result.push(left_val.clone());
+            left_idx += 1;
+            right_idx += 1;
+        }
+        // Case 2: left > right
+        // Move forward on the right
+        // Explanation: ascending order -> the next elements on the left are all greater than the current one
+        else if left_val > right_val {
+            right_idx += 1;
+        }
+        // Opposite of case 2
+        else /* left_val < right_val */ {
+            left_idx += 1;
         }
     }
 }
