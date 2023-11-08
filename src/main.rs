@@ -120,6 +120,12 @@ fn search_rec(curr_candidates: &Neighbours, mat_candidates: &[Neighbours], curr_
 
 // Merge two sorted slices
 // These must be in ascending order
+// Tried and didn't improve performance:
+//  * using Copy instead of Clone
+//  * replacing the type with actual usize
+// Ideas to try:
+//  * use unchecked_get
+//  * use u16 instead of usize
 fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T], result: &mut Vec<T>) {
     let mut left_idx = 0;
     let mut right_idx = 0;
@@ -140,11 +146,15 @@ fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T], result: &mut Vec<T>) {
         // Move forward on the right
         // Explanation: ascending order -> the next elements on the left are all greater than the current one
         else if left_val > right_val {
-            right_idx += 1;
+            while right_idx < right.len() && left_val > &right[right_idx] {
+                right_idx += 1;
+            }
         }
         // Opposite of case 2
         else /* left_val < right_val */ {
-            left_idx += 1;
+            while left_idx < left.len() && &left[left_idx] < right_val {
+                left_idx += 1;
+            }
         }
     }
 }
