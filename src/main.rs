@@ -128,7 +128,6 @@ fn search_rec(curr_candidates: &BitSet, curr_words: &mut Vec<usize>, nsolutions:
     let final_step = (curr_words.len() == 4);
 
     let mut rec_candidates = curr_candidates.clone();
-    let mut last_i = 0;
 
     for i in curr_candidates.ones() {
         if final_step {
@@ -140,13 +139,12 @@ fn search_rec(curr_candidates: &BitSet, curr_words: &mut Vec<usize>, nsolutions:
         else {
             // Recurse
             // Optimization: perform the filtering of previous words as we go
-            rec_candidates.set_range(last_i..i, false);
             let new_candidates = filter_candidates(&rec_candidates, i, rsc);
             curr_words.push(i);
             search_rec(&new_candidates, curr_words, nsolutions, rsc);
             curr_words.pop();
         }
-        last_i = i;
+        rec_candidates.set(i, false);
     }
 }
 
