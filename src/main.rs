@@ -10,7 +10,9 @@ fn main() {
 
     let bs = build_bitsets(&red_words);
 
-    search(red_words, bs, anagrams);
+    let answer = search(red_words, bs, anagrams);
+    println!("Number of solutions: {}", answer);
+    assert_eq!(answer, 831);
 }
 
 type Word = String;
@@ -107,7 +109,7 @@ struct Resources {
     anagrams:       Anagrams,
 }
 
-fn search(all_words: Vec<Word>, letter_filters: [BitSet; NLETTERS], anagrams: Anagrams) {
+fn search(all_words: Vec<Word>, letter_filters: [BitSet; NLETTERS], anagrams: Anagrams) -> usize {
     let rsc = Resources {
         words: all_words,
         letter_filters,
@@ -116,10 +118,12 @@ fn search(all_words: Vec<Word>, letter_filters: [BitSet; NLETTERS], anagrams: An
 
     let all_candidates = all_ones_bitset(rsc.words.len());
     let mut stack = Vec::new();
-    search_rec(&all_candidates, &mut stack, &rsc);
+    let mut nsolutions = 0;
+    search_rec(&all_candidates, &mut stack, &mut nsolutions, &rsc);
+    return nsolutions;
 }
 
-fn search_rec(curr_candidates: &BitSet, curr_words: &mut Vec<usize>, rsc: &Resources) {
+fn search_rec(curr_candidates: &BitSet, curr_words: &mut Vec<usize>, nsolutions: &mut usize, rsc: &Resources) {
     #[allow(unused_parens)]
     let final_step = (curr_words.len() == 4);
 
@@ -130,7 +134,7 @@ fn search_rec(curr_candidates: &BitSet, curr_words: &mut Vec<usize>, rsc: &Resou
         if final_step {
             // TODO assert that the solutions make sense
             curr_words.push(i);
-            solution(&curr_words, rsc);
+            solution(&curr_words, rsc, nsolutions);
             curr_words.pop();
         }
         else {
@@ -139,7 +143,7 @@ fn search_rec(curr_candidates: &BitSet, curr_words: &mut Vec<usize>, rsc: &Resou
             rec_candidates.set_range(last_i..i, false);
             let new_candidates = filter_candidates(&rec_candidates, i, rsc);
             curr_words.push(i);
-            search_rec(&new_candidates, curr_words, rsc);
+            search_rec(&new_candidates, curr_words, nsolutions, rsc);
             curr_words.pop();
         }
         last_i = i;
@@ -161,10 +165,10 @@ fn filter_candidates(curr_candidates: &BitSet, new_word_idx: usize, rsc: &Resour
     return new_candidates;
 }
 
-fn solution(solution: &[usize], rsc: &Resources) {
+fn solution(solution: &[usize], rsc: &Resources, nsolutions: &mut usize) {
     // Build all the permutations using the anagrams
     // This is all very reminiscent of the initial algorithm...
-    fn permutations<'a>(resolved_words: &mut Vec<&'a Word>, init_solution: &[usize], rsc: &'a Resources) {
+    fn permutations<'a>(resolved_words: &mut Vec<&'a Word>, nsolutions: &mut usize, init_solution: &[usize], rsc: &'a Resources) {
         let curr_level = resolved_words.len();
         #[allow(unused_parens)]
         let final_step = (curr_level == (init_solution.len() - 1));
@@ -176,14 +180,15 @@ fn solution(solution: &[usize], rsc: &Resources) {
             resolved_words.push(word_collision);
             if final_step {
                 println!("Solution: {:?}", resolved_words);
+                *nsolutions += 1;
             }
             else {
-                permutations(resolved_words, init_solution, rsc);
+                permutations(resolved_words, nsolutions, init_solution, rsc);
             }
             resolved_words.pop();
         }
     }
 
     let mut v = Vec::new();
-    permutations(&mut v, solution, rsc);
+    permutations(&mut v, nsolutions, solution, rsc);
 }
