@@ -12,7 +12,9 @@ fn main() {
     let bs = build_bitsets(&red_words);
     let mat_candidates = materialize_candidates(&red_words, &bs);
 
-    search(red_words, mat_candidates, anagrams);
+    let answer = search(red_words, mat_candidates, anagrams);
+    println!("Number of solutions: {}", answer);
+    assert_eq!(answer, 831);
 }
 
 type Word = String;
@@ -141,7 +143,7 @@ struct Resources {
     anagrams:       Anagrams,
 }
 
-fn search(all_words: Vec<Word>, mat_candidates: Vec<Neighbours>, anagrams: Anagrams) {
+fn search(all_words: Vec<Word>, mat_candidates: Vec<Neighbours>, anagrams: Anagrams) -> usize {
     let rsc = Resources {
         words: all_words,
         mat_candidates,
@@ -150,11 +152,13 @@ fn search(all_words: Vec<Word>, mat_candidates: Vec<Neighbours>, anagrams: Anagr
 
     let all_candidates = (0..rsc.words.len()).collect::<Vec<_>>();
     let mut stack = Vec::new();
-    search_rec(&all_candidates, &mut stack, &rsc);
+    let mut nsolutions = 0;
+    search_rec(&all_candidates, &mut stack, &mut nsolutions, &rsc);
+    return nsolutions;
 }
 
 // TODO: we can easily optimize avoiding having to materialize the first level if we implement our own Index that always returns the index
-fn search_rec(curr_candidates: &Neighbours, curr_words: &mut Vec<usize>, rsc: &Resources) {
+fn search_rec(curr_candidates: &Neighbours, curr_words: &mut Vec<usize>, nsolutions: &mut usize, rsc: &Resources) {
     #[allow(unused_parens)]
     let final_step = (curr_words.len() == 4);
     let mut rec_candidates = Vec::new();
@@ -163,14 +167,14 @@ fn search_rec(curr_candidates: &Neighbours, curr_words: &mut Vec<usize>, rsc: &R
         if final_step {
             // TODO assert that the solutions make sense
             curr_words.push(i);
-            solution(&curr_words, rsc);
+            solution(&curr_words, rsc, nsolutions);
             curr_words.pop();
         }
         else {
             // Recurse
             merge_sorted(curr_candidates, &rsc.mat_candidates[i], &mut rec_candidates);
             curr_words.push(i);
-            search_rec(&rec_candidates, curr_words, rsc);
+            search_rec(&rec_candidates, curr_words, nsolutions, rsc);
             curr_words.pop();
         }
     }
@@ -217,10 +221,10 @@ fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T], result: &mut Vec<T>) {
     }
 }
 
-fn solution(solution: &[usize], rsc: &Resources) {
+fn solution(solution: &[usize], rsc: &Resources, nsolutions: &mut usize) {
     // Build all the permutations using the anagrams
     // This is all very reminiscent of the initial algorithm...
-    fn permutations<'a>(resolved_words: &mut Vec<&'a Word>, init_solution: &[usize], rsc: &'a Resources) {
+    fn permutations<'a>(resolved_words: &mut Vec<&'a Word>, nsolutions: &mut usize, init_solution: &[usize], rsc: &'a Resources) {
         let curr_level = resolved_words.len();
         #[allow(unused_parens)]
         let final_step = (curr_level == (init_solution.len() - 1));
@@ -232,14 +236,15 @@ fn solution(solution: &[usize], rsc: &Resources) {
             resolved_words.push(word_collision);
             if final_step {
                 println!("Solution: {:?}", resolved_words);
+                *nsolutions += 1;
             }
             else {
-                permutations(resolved_words, init_solution, rsc);
+                permutations(resolved_words, nsolutions, init_solution, rsc);
             }
             resolved_words.pop();
         }
     }
 
     let mut v = Vec::new();
-    permutations(&mut v, solution, rsc);
+    permutations(&mut v, nsolutions, solution, rsc);
 }
