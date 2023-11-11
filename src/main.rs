@@ -148,11 +148,18 @@ fn search(all_words: Vec<Word>, mat_candidates: Vec<Neighbours>, anagrams: Anagr
         anagrams
     };
 
-    let all_candidates = all_ones_bitset(rsc.words.len());
-    let mut stack = Vec::new();
-    let mut nsolutions = 0;
-    search_rec(&all_candidates, &mut stack, &mut nsolutions, &rsc);
-    return nsolutions;
+    use rayon::prelude::*;
+
+    let nwords = rsc.words.len();
+    (0..nwords).into_par_iter()
+        .map(|word_idx| {
+            let candidates = &rsc.mat_candidates[word_idx];
+            let mut stack = vec![word_idx];
+            let mut nsolutions = 0;
+            search_rec(candidates, &mut stack, &mut nsolutions, &rsc);
+            nsolutions
+        })
+        .sum()
 }
 
 // TODO: we can easily optimize avoiding having to materialize the first level if we implement our own Index that always returns the index
@@ -191,7 +198,7 @@ fn solution(solution: &[usize], rsc: &Resources, nsolutions: &mut usize) {
         for word_collision in word_anagrams {
             resolved_words.push(word_collision);
             if final_step {
-                println!("Solution: {:?}", resolved_words);
+                //println!("Solution: {:?}", resolved_words);
                 *nsolutions += 1;
             }
             else {
