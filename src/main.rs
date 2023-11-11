@@ -1,6 +1,5 @@
 use fixedbitset::FixedBitSet as BitSet;
 use std::collections::{HashSet, HashMap};
-use std::cmp::Ordering;
 
 fn main() {
     let words = read_words();
@@ -106,8 +105,7 @@ fn build_bitsets(words: &[Word]) -> [BitSet; NLETTERS] {
 }
 
 // This basically acts as a graph in adjacency list format
-type Neighbours = Vec<WordIdx>;
-type WordIdx = usize;
+type Neighbours = BitSet;
 
 fn materialize_candidates(words: &[Word], letter_filters: &[BitSet]) -> Vec<Neighbours> {
     words.into_iter()
@@ -150,7 +148,7 @@ fn search(all_words: Vec<Word>, mat_candidates: Vec<Neighbours>, anagrams: Anagr
         anagrams
     };
 
-    let all_candidates = (0..rsc.words.len()).collect::<Vec<_>>();
+    let all_candidates = all_ones_bitset(rsc.words.len());
     let mut stack = Vec::new();
     let mut nsolutions = 0;
     search_rec(&all_candidates, &mut stack, &mut nsolutions, &rsc);
@@ -161,9 +159,8 @@ fn search(all_words: Vec<Word>, mat_candidates: Vec<Neighbours>, anagrams: Anagr
 fn search_rec(curr_candidates: &Neighbours, curr_words: &mut Vec<usize>, nsolutions: &mut usize, rsc: &Resources) {
     #[allow(unused_parens)]
     let final_step = (curr_words.len() == 4);
-    let mut rec_candidates = Vec::new();
 
-    for i in curr_candidates.into_iter().cloned() {
+    for i in curr_candidates.ones() {
         if final_step {
             // TODO assert that the solutions make sense
             curr_words.push(i);
@@ -172,51 +169,10 @@ fn search_rec(curr_candidates: &Neighbours, curr_words: &mut Vec<usize>, nsoluti
         }
         else {
             // Recurse
-            merge_sorted(curr_candidates, &rsc.mat_candidates[i], &mut rec_candidates);
+            let rec_candidates = curr_candidates & &rsc.mat_candidates[i];
             curr_words.push(i);
             search_rec(&rec_candidates, curr_words, nsolutions, rsc);
             curr_words.pop();
-        }
-    }
-}
-
-// Merge two sorted slices
-// These must be in ascending order
-// Tried and didn't improve performance:
-//  * using Copy instead of Clone
-//  * replacing the type with actual usize
-// Ideas to try:
-//  * use unchecked_get
-//  * use u16 instead of usize
-fn merge_sorted<T: Ord + Clone>(left: &[T], right: &[T], result: &mut Vec<T>) {
-    let mut left_idx = 0;
-    let mut right_idx = 0;
-    result.clear();
-
-    // Any elements still present on either side when the other side is done cannot be in the result set
-    while left_idx < left.len() && right_idx < right.len() {
-        let left_val  = &left[left_idx];
-        let right_val = &right[right_idx];
-
-        // Case 1: left == right
-        if left_val == right_val {
-            result.push(left_val.clone());
-            left_idx += 1;
-            right_idx += 1;
-        }
-        // Case 2: left > right
-        // Move forward on the right
-        // Explanation: ascending order -> the next elements on the left are all greater than the current one
-        else if left_val > right_val {
-            while right_idx < right.len() && left_val > &right[right_idx] {
-                right_idx += 1;
-            }
-        }
-        // Opposite of case 2
-        else /* left_val < right_val */ {
-            while left_idx < left.len() && &left[left_idx] < right_val {
-                left_idx += 1;
-            }
         }
     }
 }
