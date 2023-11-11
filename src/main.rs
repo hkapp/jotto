@@ -1,17 +1,26 @@
 use fixedbitset::FixedBitSet as BitSet;
 use std::collections::{HashSet, HashMap};
+use std::time::Instant;
 
 fn main() {
-    let words = read_words();
-    println!("Before anagram removal: {} words", words.len());
+    fn time<F: FnOnce() -> T, T>(phase: &str, f: F) -> T {
+        let start = Instant::now();
+        let res = f();
+        let duration = start.elapsed();
+        println!("{}: {:?}", phase, duration);
+        res
+    }
 
-    let (red_words, anagrams) = remove_anagrams(words);
-    println!("After anagram removal: {} words", red_words.len());
+    let words = time("read_words", || read_words());
+    //println!("Before anagram removal: {} words", words.len());
 
-    let bs = build_bitsets(&red_words);
-    let mat_candidates = materialize_candidates(&red_words, &bs);
+    let (red_words, anagrams) = time("remove_anagrams", || remove_anagrams(words));
+    //println!("After anagram removal: {} words", red_words.len());
 
-    let answer = search(red_words, mat_candidates, anagrams);
+    let bs = time("build_bitsets", || build_bitsets(&red_words));
+    let mat_candidates = time("materialize_candidates", || materialize_candidates(&red_words, &bs));
+
+    let answer = time("search", || search(red_words, mat_candidates, anagrams));
     println!("Number of solutions: {}", answer);
     assert_eq!(answer, 831);
 }
