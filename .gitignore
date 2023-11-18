@@ -1,2 +1,6 @@
 /target
 Cargo.lock
+
+hs/Main
+*.o
+*.hi
