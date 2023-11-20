@@ -69,7 +69,7 @@ searchRec allWords currSol =
 flatten = join
 
 permutations :: Anagrams -> [String] -> [[String]]
-permutations anagrams [] = []
+permutations _        []     = [[]]
 permutations anagrams (w:ws) = (anagrams ! (Set.fromList w)) >>= (\q -> map ((:) q) (permutations anagrams ws))
 
 debug x y =
