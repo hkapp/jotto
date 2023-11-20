@@ -6,6 +6,7 @@ import Data.Functor((<&>))
 import Data.Map (Map, (!))
 import Data.Set (Set)
 import qualified Data.Map as Map
+import Data.List (tails)
 
 main =
   do
@@ -24,7 +25,7 @@ readAll =
     let fileLines = lines fileContent
     -- Remove '\r' characters in every line
     let actualWords = fileLines <&> (filter isLetter)
-    return $ take 60000 actualWords
+    return $ take 100000 actualWords
 
 type Anagrams = Map (Set Char) [String]
 
@@ -56,11 +57,14 @@ searchRec _ currSol | length currSol == 5 = [currSol]
 
 searchRec allWords currSol =
   let
-    candidates = filter validCandidate allWords
-    validCandidate = all (flip Set.notMember currLetters)
+    candidates = filter validCandidate (tails allWords)
+
+    validCandidate []    = False
+    validCandidate (w:_) = all (flip Set.notMember currLetters) w
+
     currLetters = Set.fromList $ flatten currSol
   in
-    candidates >>= (\w -> searchRec allWords (w:currSol))
+    candidates >>= (\(w:remWords) -> searchRec remWords (w:currSol))
 
 flatten = join
 
